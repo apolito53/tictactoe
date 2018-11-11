@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/turnLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:text="@string/game_not_started"
+        android:textAlignment="center"
+        android:textSize="24sp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonGrid"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.39999998" />
+
+    <GridLayout
+        android:id="@+id/buttonGrid"
+        android:layout_width="400dp"
+        android:layout_height="400dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:columnCount="3"
+        android:padding="8dp"
+        android:rowCount="3"
+        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/turnLabel">
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn1_1"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="0"
+            android:layout_rowWeight="1"
+            android:layout_column="0"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/T" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn1_2"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="0"
+            android:layout_rowWeight="1"
+            android:layout_column="1"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/i" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn1_3"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="0"
+            android:layout_rowWeight="1"
+            android:layout_column="2"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/c" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn2_1"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="1"
+            android:layout_rowWeight="1"
+            android:layout_column="0"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/T" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn2_2"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="1"
+            android:layout_rowWeight="1"
+            android:layout_column="1"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/a" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn2_3"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="1"
+            android:layout_rowWeight="1"
+            android:layout_column="2"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/c" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn3_1"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="2"
+            android:layout_rowWeight="1"
+            android:layout_column="0"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/T" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn3_2"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="2"
+            android:layout_rowWeight="1"
+            android:layout_column="1"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/o" />
+
+        <com.example.anthony.tictactoe.TTTButton
+            android:id="@+id/btn3_3"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_row="2"
+            android:layout_rowWeight="1"
+            android:layout_column="2"
+            android:layout_columnWeight="1"
+            android:maxWidth="30dp"
+            android:maxHeight="30dp"
+            android:minWidth="30dp"
+            android:minHeight="30dp"
+            android:text="@string/e" />
+    </GridLayout>
+
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/bottomPanel"
+        android:layout_width="0dp"
+        android:layout_height="64dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/startButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/start_game"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/cancel"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/startButton"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/restartButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/restart"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/startButton"
+            app:layout_constraintTop_toTopOf="parent" />
+    </android.support.constraint.ConstraintLayout>
+
+</android.support.constraint.ConstraintLayout>

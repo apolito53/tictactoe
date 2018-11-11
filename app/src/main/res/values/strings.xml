@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Tic Tac Toe</string>
+    <string name="T">T</string>
+    <string name="game_not_started">Game is not started yet!</string>
+    <string name="start_game">START GAME</string>
+    <string name="your_turn">, your turn!</string>
+    <string name="cancel">CANCEL</string>
+    <string name="restart">RESTART</string>
+    <string name="submit">SUBMIT</string>
+    <string name="name">Name</string>
+    <string name="i">I</string>
+    <string name="c">C</string>
+    <string name="a">A</string>
+    <string name="o">O</string>
+    <string name="e">E</string>
+    <string name="game_in_progress">GAME IN PROGRESS</string>
+</resources>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:id="@+id/player1_settings">
+
+    <EditText
+        android:id="@+id/player1Name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:ems="10"
+        android:hint="@string/name"
+        android:textColorHint="#777777"
+        android:textColor="#FFFFFF"
+        android:inputType="textPersonName"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="0dp"
+        android:layout_height="76dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/player1Name">
+
+
+        <ToggleButton
+            android:id="@+id/blackXButton"
+            android:layout_width="50dp"
+            android:layout_height="70dp"
+            android:layout_margin="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/black_x"
+            android:text=""
+            android:textOff=""
+            android:textOn="" />
+
+        <ToggleButton
+            android:id="@+id/blueXButton"
+            android:layout_width="45dp"
+            android:layout_height="65dp"
+            android:layout_margin="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/blue_x"
+            android:text=""
+            android:textOff=""
+            android:textOn="" />
+
+        <ToggleButton
+            android:id="@+id/redXButton"
+            android:layout_width="45dp"
+            android:layout_height="65dp"
+            android:layout_margin="3dp"
+            android:layout_weight="1"
+            android:background="@drawable/red_x"
+            android:text=""
+            android:textOff=""
+            android:textOn="" />
+    </LinearLayout>
+</android.support.constraint.ConstraintLayout>
