@@ -77,6 +77,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        if(!isSmsPermissionGranted()) {
+            requestReadAndSendSmsPermission();
+        }
+
         super.onCreate(savedInstanceState);
         inflater = MainActivity.this.getLayoutInflater();
         main = inflater.inflate(R.layout.activity_main, null);
@@ -168,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
                            if (checkBoardCondition()) {
                                if(isPlayer1) {
                                    smsManager.sendTextMessage(otherPlayerNumber, null, btn.getName(), null, null);
-                                   if(noWinner()) {
+                                   if(noWinner() && !(turns == 9)) {
                                        showWaitingDialog();
                                    }
                                }
@@ -180,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
                            if (checkBoardCondition()) {
                                if(!isPlayer1) {
                                    smsManager.sendTextMessage(otherPlayerNumber, null, btn.getName(), null, null);
-                                   if(noWinner()) {
+                                   if(noWinner() && !(turns == 9)) {
                                        showWaitingDialog();
                                    }
                                }
@@ -335,6 +339,12 @@ public class MainActivity extends AppCompatActivity {
             builder.setTitle("Player 1")
                     .setMessage("Player 1, please enter your name and select your icon: ");
         }
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                reset();
+            }
+        });
         builder.setPositiveButton("Enter", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -424,6 +434,12 @@ public class MainActivity extends AppCompatActivity {
             builder.setTitle("Player 1")
                     .setMessage("Player 1, please enter your name and select your icon: ");
         }
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                reset();
+            }
+        });
         builder.setPositiveButton("Enter", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
@@ -512,6 +528,12 @@ public class MainActivity extends AppCompatActivity {
             builder.setTitle("Player 2")
                     .setMessage("Player 2, please enter your name and select your icon: ");
         }
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                reset();
+            }
+        });
         builder.setCancelable(false)
                 .setPositiveButton("Enter", new DialogInterface.OnClickListener() {
                     @Override
@@ -608,6 +630,12 @@ public class MainActivity extends AppCompatActivity {
             builder.setTitle("Player 2")
                     .setMessage("Player 2, please enter your name and select your icon: ");
         }
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                reset();
+            }
+        });
         builder.setCancelable(false)
                 .setPositiveButton("Enter", new DialogInterface.OnClickListener() {
                     @Override
@@ -681,7 +709,7 @@ public class MainActivity extends AppCompatActivity {
         turns++;
         String p1 = String.valueOf(players[0].symbol);
         String p2 = String.valueOf(players[1].symbol);
-        if ((buttons[0].getText().equals(p1) && buttons[1].getText().equals(p1) && buttons[2].getText().equals(p1)
+        if        ((buttons[0].getText().equals(p1) && buttons[1].getText().equals(p1) && buttons[2].getText().equals(p1)
                 || (buttons[3].getText().equals(p1) && buttons[4].getText().equals(p1) && buttons[5].getText().equals(p1))
                 || (buttons[6].getText().equals(p1) && buttons[7].getText().equals(p1) && buttons[8].getText().equals(p1))
                 || (buttons[0].getText().equals(p1) && buttons[3].getText().equals(p1) && buttons[6].getText().equals(p1))
@@ -705,6 +733,7 @@ public class MainActivity extends AppCompatActivity {
             winner = false;
             noWinner();
         }
+
         if (current == 0) {
             current = 1;
         } else {
@@ -763,6 +792,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean noWinner() {
+        if(turns == 9) {
+            pd.dismiss();
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -952,9 +984,6 @@ public class MainActivity extends AppCompatActivity {
 
     /** * Request runtime SMS permission */
     private void requestReadAndSendSmsPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)) {
-
-        }
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS,
                 Manifest.permission.SEND_SMS,
                 Manifest.permission.RECEIVE_SMS,
