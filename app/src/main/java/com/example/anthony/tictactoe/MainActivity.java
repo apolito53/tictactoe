@@ -1,6 +1,8 @@
 package com.example.anthony.tictactoe;
 
 import android.Manifest;
+import android.support.v4.content.LocalBroadcastManager;
+import java.util.Locale;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
@@ -70,7 +72,13 @@ public class MainActivity extends AppCompatActivity {
     String otherPlayerNumber;
     String player2Name;
 
-    SMSReceiver smsReceiver;
+    private AlertDialog replyEntry;
+    private final BroadcastReceiver gameReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            receiveMessage(intent.getStringExtra("number"), intent.getStringExtra("command"));
+        }
+    };
     SmsManager smsManager = SmsManager.getDefault();
 
     View main;
@@ -119,8 +127,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(main);
 
         pd = new ProgressDialog(MainActivity.this);
+        pd.setButton(DialogInterface.BUTTON_NEUTRAL, "Enter received reply", (DialogInterface.OnClickListener) null);
 
-        smsReceiver = new SMSReceiver(this);
+        LocalBroadcastManager.getInstance(this).registerReceiver(gameReceiver, new IntentFilter(SMSReceiver.GAME_COMMAND));
 
         context = getApplicationContext();
         turnLabel = findViewById(R.id.turnLabel);
@@ -865,11 +874,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void receiveMessage(String number, String message) {
-        if (message.equals("accepted") || message.equals("rejected")) {
-            if (inviteId == null || !PhoneNumberUtils.compare(otherPlayerNumber, number)) return;
-            clearInvite();
-        }
         if (message.equals("initiate")) {
+            if (multiplayer || current != 0) return;
             otherPlayerNumber = number;
             singleton.setOtherPlayerNumber(number);
             builder = new AlertDialog.Builder(MainActivity.this);
@@ -893,23 +899,23 @@ public class MainActivity extends AppCompatActivity {
                     }).create().show();
         }
 
-        pd.dismiss();
-        if (message.equals("accepted")) {
-            builder  = new AlertDialog.Builder(MainActivity.this);
-                    builder.setTitle("Accepted")
-                    .setMessage(otherPlayerNumber + " accepted your game request!")
-                    .setCancelable(false)
-                    .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            players[1] = new Player(otherPlayerNumber, R.drawable.blue_o);
-                            isPlayer1 = true;
-                            initPlayer1();
-                        }
-                    }).create().show();
+        if (!multiplayer || number == null || otherPlayerNumber == null ||
+                !PhoneNumberUtils.compare(otherPlayerNumber, number)) return;
+
+        if (inviteId != null && (message.equals("accepted") || message.equals("ready"))) {
+            clearInvite();
+            closeReplyEntry();
+            isPlayer1 = true;
+            otherPlayerReady = message.equals("ready");
+            players[1] = new Player(otherPlayerNumber, R.drawable.blue_o);
+            initPlayer1();
+            return;
         }
 
         if (message.equals("rejected")) {
+            if (inviteId == null) return;
+            clearInvite();
+            closeReplyEntry();
             pd.dismiss();
             new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Rejected")
@@ -923,6 +929,8 @@ public class MainActivity extends AppCompatActivity {
                     }).create().show();
         }
         if (message.equals("ready")) {
+            if (otherPlayerReady || inviteId != null) return;
+            closeReplyEntry();
             pd.dismiss();
             otherPlayerReady = true;
             if(selfReady) {
@@ -939,36 +947,19 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if (message.equals("btn1")) {
+        if (message.matches("btn[1-9]")) {
+            if (!selfReady || !otherPlayerReady || current != (isPlayer1 ? 2 : 1)) return;
+            TTTButton square = buttons[message.charAt(3) - '1'];
+            if (!square.getStatus().isEmpty()) return;
+            closeReplyEntry();
             pd.dismiss();
-            btn1.callOnClick();
-        } else if (message.equals("btn2")) {
-            pd.dismiss();
-            btn2.callOnClick();
-        } else if (message.equals("btn3")) {
-            pd.dismiss();
-            btn3.callOnClick();
-        } else if (message.equals("btn4")) {
-            pd.dismiss();
-            btn4.callOnClick();
-        } else if (message.equals("btn5")) {
-            pd.dismiss();
-            btn5.callOnClick();
-        } else if (message.equals("btn6")) {
-            pd.dismiss();
-            btn6.callOnClick();
-        } else if (message.equals("btn7")) {
-            pd.dismiss();
-            btn7.callOnClick();
-        } else if (message.equals("btn8")) {
-            pd.dismiss();
-            btn8.callOnClick();
-        } else if (message.equals("btn9")) {
-            pd.dismiss();
-            btn9.callOnClick();
+            square.callOnClick();
         }
 
         if (message.equals("exit")) {
+            closeReplyEntry();
+            clearInvite();
+            pd.dismiss();
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -1073,12 +1064,14 @@ public class MainActivity extends AppCompatActivity {
     private void showInviteProgress() {
         if (inviteProgress == null) {
             inviteProgress = new ProgressDialog(this);
+            inviteProgress.setButton(DialogInterface.BUTTON_NEUTRAL, "Enter received reply", (DialogInterface.OnClickListener) null);
             inviteProgress.setCancelable(true);
             inviteProgress.setCanceledOnTouchOutside(false);
             inviteProgress.setOnCancelListener(dialog -> { clearInvite(); reset(); });
         }
         inviteProgress.setMessage(inviteSent ? "Invitation sent. Waiting for the other player..." : "Sending invitation by SMS...");
         inviteProgress.show();
+        enableReplyEntry(inviteProgress);
     }
 
     private void clearInvite() {
@@ -1106,14 +1099,54 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         unregisterReceiver(inviteResult);
-        unregisterReceiver(smsReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(gameReceiver);
+        if (replyEntry != null) replyEntry.dismiss();
         if (inviteProgress != null) inviteProgress.dismiss();
         super.onDestroy();
+    }
+
+    private void closeReplyEntry() {
+        if (replyEntry != null) replyEntry.dismiss();
+        replyEntry = null;
+    }
+
+    private void enableReplyEntry(ProgressDialog progress) {
+        Button button = progress.getButton(DialogInterface.BUTTON_NEUTRAL);
+        button.setVisibility(View.VISIBLE);
+        button.setText("Enter received reply");
+        button.setOnClickListener(v -> {
+            boolean inviting = inviteId != null;
+            boolean awaitingReady = !otherPlayerReady;
+            EditText input = new EditText(this);
+            input.setSingleLine();
+            input.setHint(inviting ? "accepted or ready" : awaitingReady ? "ready" : "btn1 to btn9");
+            replyEntry = new AlertDialog.Builder(this)
+                    .setTitle("Enter received reply")
+                    .setMessage("Type the game message your opponent sent you in Messages.")
+                    .setView(input).setPositiveButton("Use reply", null)
+                    .setNegativeButton("Cancel", null).show();
+            replyEntry.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(use -> {
+                String command = input.getText().toString().trim().toLowerCase(Locale.ROOT);
+                boolean valid = inviting ? command.equals("accepted") || command.equals("ready")
+                        : awaitingReady ? command.equals("ready") : command.matches("btn[1-9]");
+                if (!valid) {
+                    input.setError("Enter the reply shown in the hint.");
+                    return;
+                }
+                if (command.startsWith("btn") && !buttons[command.charAt(3) - '1'].getStatus().isEmpty()) {
+                    input.setError("That square is already occupied.");
+                    return;
+                }
+                closeReplyEntry();
+                receiveMessage(otherPlayerNumber, command);
+            });
+        });
     }
 
     public void showWaitingDialog() {
         pd.setMessage("Waiting for other player...");
         pd.setCancelable(false);
         pd.show();
+        enableReplyEntry(pd);
     }
 }

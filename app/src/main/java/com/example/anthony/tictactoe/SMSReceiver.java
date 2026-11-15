@@ -1,45 +1,27 @@
 package com.example.anthony.tictactoe;
 
-import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.Build;
-import android.os.Bundle;
-import android.telephony.SmsManager;
+import android.provider.Telephony;
+import android.support.v4.content.LocalBroadcastManager;
 import android.telephony.SmsMessage;
-import android.widget.Toast;
+import java.util.Locale;
 
 public class SMSReceiver extends BroadcastReceiver {
-    MainActivity activity = null;
-    final IntentFilter intentFilter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
-    public SMSReceiver(Context context) {
-        activity = (MainActivity) context;
-        context.registerReceiver(this, intentFilter);
-    }
+    static final String GAME_COMMAND = "com.example.anthony.tictactoe.GAME_COMMAND";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Bundle bundle = intent.getExtras();
-        SmsMessage currentMessage = null;
-
-        if (bundle != null) {
-            final Object[] pdusObj = (Object[]) bundle.get("pdus");
-
-            if (pdusObj != null) {
-                for (int i = 0; i < pdusObj.length; i++) {
-                    String format = bundle.getString("format");
-                    currentMessage = SmsMessage.createFromPdu((byte[]) pdusObj[i], format);
-                }
-            }
-
-            if (currentMessage != null) {
-                String senderNum = currentMessage.getDisplayOriginatingAddress();
-                String message = currentMessage.getDisplayMessageBody();
-                activity.receiveMessage(senderNum, message);
-            }
-        }
+        if (!Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) return;
+        SmsMessage[] parts = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+        if (parts == null || parts.length != 1 || parts[0] == null) return;
+        String number = parts[0].getOriginatingAddress();
+        String body = parts[0].getMessageBody();
+        if (number == null || body == null) return;
+        String command = body.trim().toLowerCase(Locale.ROOT);
+        if (!command.matches("initiate|accepted|rejected|ready|exit|btn[1-9]")) return;
+        Intent gameEvent = new Intent(GAME_COMMAND).putExtra("number", number).putExtra("command", command);
+        LocalBroadcastManager.getInstance(context).sendBroadcastSync(gameEvent);
     }
 }
