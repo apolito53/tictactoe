@@ -73,10 +73,18 @@ public class MainActivity extends AppCompatActivity {
     String player2Name;
 
     private AlertDialog replyEntry;
+    private String lastAutomaticReply = "No game text seen during this wait.";
     private final BroadcastReceiver gameReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            receiveMessage(intent.getStringExtra("number"), intent.getStringExtra("command"));
+            String number = intent.getStringExtra("number");
+            String command = intent.getStringExtra("command");
+            if (multiplayer && otherPlayerNumber != null) {
+                lastAutomaticReply = describeAutomaticReply(number, command);
+            }
+            receiveMessage(number, command);
+            if (inviteProgress != null && inviteProgress.isShowing()) updateInviteMessage();
+            if (pd.isShowing()) updateWaitMessage();
         }
     };
     SmsManager smsManager = SmsManager.getDefault();
@@ -873,6 +881,44 @@ public class MainActivity extends AppCompatActivity {
         return !winner;
     }
 
+    private boolean isOpponent(String number) {
+        if (number == null || otherPlayerNumber == null) return false;
+        if (PhoneNumberUtils.compare(otherPlayerNumber, number)) return true;
+        // Compare complete international numbers when the carrier and the dialer use different formats.
+        android.telephony.TelephonyManager telephony =
+                (android.telephony.TelephonyManager) getSystemService(TELEPHONY_SERVICE);
+        String country = telephony == null ? "" : telephony.getNetworkCountryIso();
+        if (country == null || country.isEmpty()) country = Locale.getDefault().getCountry();
+        String region = country.toUpperCase(Locale.ROOT);
+        String expected = PhoneNumberUtils.formatNumberToE164(otherPlayerNumber, region);
+        return expected != null && expected.equals(PhoneNumberUtils.formatNumberToE164(number, region));
+    }
+
+    private String describeAutomaticReply(String number, String command) {
+        if (!isOpponent(number)) return "Game text arrived from a different number than the opponent.";
+        if (command.startsWith("btn")) {
+            if (!selfReady || !otherPlayerReady) return command + " arrived before both players were ready.";
+            if (current != (isPlayer1 ? 2 : 1)) return command + " arrived during your turn.";
+            if (!buttons[command.charAt(3) - '1'].getStatus().isEmpty()) return command + " named an occupied square.";
+        }
+        return "Received " + command + " from the opponent.";
+    }
+
+    private String receiveStatus() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                != PackageManager.PERMISSION_GRANTED) return "Receive SMS permission is off.";
+        return lastAutomaticReply;
+    }
+
+    private void updateInviteMessage() {
+        String state = inviteSent ? "Invitation sent. Waiting for the other player..." : "Sending invitation by SMS...";
+        inviteProgress.setMessage(state + "\n\n" + receiveStatus());
+    }
+
+    private void updateWaitMessage() {
+        pd.setMessage("Waiting for the other player...\n\n" + receiveStatus());
+    }
+
     public void receiveMessage(String number, String message) {
         if (message.equals("initiate")) {
             if (multiplayer || current != 0) return;
@@ -899,8 +945,7 @@ public class MainActivity extends AppCompatActivity {
                     }).create().show();
         }
 
-        if (!multiplayer || number == null || otherPlayerNumber == null ||
-                !PhoneNumberUtils.compare(otherPlayerNumber, number)) return;
+        if (!multiplayer || !isOpponent(number)) return;
 
         if (inviteId != null && (message.equals("accepted") || message.equals("ready"))) {
             clearInvite();
@@ -1046,6 +1091,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void sendInvite() {
+        lastAutomaticReply = "No game text seen during this wait.";
         inviteId = UUID.randomUUID().toString();
         inviteSent = false;
         Intent result = new Intent(INVITE_SENT).setPackage(getPackageName())
@@ -1069,7 +1115,7 @@ public class MainActivity extends AppCompatActivity {
             inviteProgress.setCanceledOnTouchOutside(false);
             inviteProgress.setOnCancelListener(dialog -> { clearInvite(); reset(); });
         }
-        inviteProgress.setMessage(inviteSent ? "Invitation sent. Waiting for the other player..." : "Sending invitation by SMS...");
+        updateInviteMessage();
         inviteProgress.show();
         enableReplyEntry(inviteProgress);
     }
@@ -1144,7 +1190,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showWaitingDialog() {
-        pd.setMessage("Waiting for other player...");
+        lastAutomaticReply = "No game text seen during this wait.";
+        updateWaitMessage();
         pd.setCancelable(false);
         pd.show();
         enableReplyEntry(pd);
