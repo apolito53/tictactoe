@@ -1,6 +1,13 @@
 package com.example.anthony.tictactoe;
 
 import android.Manifest;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.telephony.PhoneNumberUtils;
+import android.net.Uri;
+import android.provider.Settings;
+import java.util.UUID;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -71,17 +78,42 @@ public class MainActivity extends AppCompatActivity {
     ProgressDialog pd;
     AlertDialog.Builder builder;
 
+    private static final int SMS_PERMISSION_REQUEST = 1;
+    private static final String INVITE_SENT = "com.example.anthony.tictactoe.INVITE_SENT";
+    private String pendingPermissionNumber;
+    private String inviteId;
+    private boolean inviteSent;
+    private ProgressDialog inviteProgress;
+    private final BroadcastReceiver inviteResult = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (inviteId == null || !inviteId.equals(intent.getStringExtra("invite"))) return;
+            int result = getResultCode();
+            if (result == Activity.RESULT_OK) {
+                inviteSent = true;
+                showInviteProgress();
+            } else {
+                String reason;
+                switch (result) {
+                    case SmsManager.RESULT_ERROR_RADIO_OFF: reason = "The mobile radio is off."; break;
+                    case SmsManager.RESULT_ERROR_NO_SERVICE: reason = "Your phone has no mobile service."; break;
+                    case SmsManager.RESULT_ERROR_LIMIT_EXCEEDED: reason = "Android's SMS sending limit was reached."; break;
+                    default: reason = "Android returned SMS error " + result + ". Check mobile service and your default SIM for text messages.";
+                }
+                inviteFailed(reason);
+            }
+        }
+    };
+
     int exitCount = 0;
 
     Singleton singleton = Singleton.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if(!isSmsPermissionGranted()) {
-            requestReadAndSendSmsPermission();
-        }
-
         super.onCreate(savedInstanceState);
+        registerReceiver(inviteResult, new IntentFilter(INVITE_SENT),
+                getPackageName() + ".permission.INVITE_RESULT", null);
         inflater = MainActivity.this.getLayoutInflater();
         main = inflater.inflate(R.layout.activity_main, null);
         setContentView(main);
@@ -280,6 +312,20 @@ public class MainActivity extends AppCompatActivity {
                 }).create().show();
             }
         });
+
+        if (savedInstanceState != null) {
+            otherPlayerNumber = savedInstanceState.getString("inviteNumber");
+            pendingPermissionNumber = savedInstanceState.getString("pendingPermissionNumber");
+            inviteId = savedInstanceState.getString("inviteId");
+            inviteSent = savedInstanceState.getBoolean("inviteSent");
+            if (pendingPermissionNumber != null || inviteId != null) {
+                multiplayer = true;
+                startButton.setEnabled(false);
+                if (inviteId != null) showInviteProgress();
+            }
+        } else if (!isSmsPermissionGranted()) {
+            requestSmsPermissions();
+        }
 
         if(singleton.getFlag() == 1) {
             singleton.setFlag(0);
@@ -819,6 +865,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void receiveMessage(String number, String message) {
+        if (message.equals("accepted") || message.equals("rejected")) {
+            if (inviteId == null || !PhoneNumberUtils.compare(otherPlayerNumber, number)) return;
+            clearInvite();
+        }
         if (message.equals("initiate")) {
             otherPlayerNumber = number;
             singleton.setOtherPlayerNumber(number);
@@ -941,6 +991,7 @@ public class MainActivity extends AppCompatActivity {
         View phoneNumberView = inflater.inflate(R.layout.setup_multiplayer, null);
         EditText phoneText = (EditText) phoneNumberView.findViewById(R.id.phoneText);
 
+        if (otherPlayerNumber != null) phoneText.setText(otherPlayerNumber);
         builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setTitle("Multiplayer Setup")
                 .setView(phoneNumberView)
@@ -948,20 +999,20 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Submit", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        otherPlayerNumber = phoneText.getText().toString();
-                        if(!isSmsPermissionGranted()) {
-                            requestReadAndSendSmsPermission();
+                        otherPlayerNumber = PhoneNumberUtils.stripSeparators(phoneText.getText().toString().trim());
+                        if (!PhoneNumberUtils.isGlobalPhoneNumber(otherPlayerNumber)) {
+                            inviteFailed("Enter a phone number, including the country code if needed.");
+                        } else if (isSmsPermissionGranted()) {
+                            sendInvite();
                         } else {
-                            smsManager.sendTextMessage(otherPlayerNumber, null, "initiate", null, null);
-                            pd.setMessage("Awaiting response...");
-                            pd.show();
-                            pd.setCancelable(false);
+                            pendingPermissionNumber = otherPlayerNumber;
+                            requestSmsPermissions();
                         }
                     }
                 }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
+                reset();
             }
         }).create().show();
     }
@@ -974,20 +1025,90 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    /** * Check if we have SMS permission */
-    public boolean isSmsPermissionGranted() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED;
+    private boolean isSmsPermissionGranted() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED;
     }
 
-    /** * Request runtime SMS permission */
-    private void requestReadAndSendSmsPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS,
-                Manifest.permission.SEND_SMS,
-                Manifest.permission.RECEIVE_SMS,
-                Manifest.permission.READ_PHONE_STATE}, 1);
+    private void requestSmsPermissions() {
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS,
+                Manifest.permission.RECEIVE_SMS}, SMS_PERMISSION_REQUEST);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        if (code != SMS_PERMISSION_REQUEST || pendingPermissionNumber == null) return;
+        otherPlayerNumber = pendingPermissionNumber;
+        pendingPermissionNumber = null;
+        if (isSmsPermissionGranted()) {
+            sendInvite();
+        } else {
+            new AlertDialog.Builder(this).setTitle("SMS permission needed")
+                    .setMessage("Multiplayer needs permission to send and receive text messages. Check SMS in the app's permission settings, then try the invite again.")
+                    .setPositiveButton("App settings", (dialog, which) -> {
+                        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:" + getPackageName())));
+                        setupMultiplayer();
+                    }).setNegativeButton("Cancel", (dialog, which) -> reset()).setCancelable(false).show();
+        }
+    }
+
+    private void sendInvite() {
+        inviteId = UUID.randomUUID().toString();
+        inviteSent = false;
+        Intent result = new Intent(INVITE_SENT).setPackage(getPackageName())
+                .putExtra("invite", inviteId);
+        PendingIntent sent = PendingIntent.getBroadcast(this, 0, result,
+                PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+        showInviteProgress();
+        try {
+            smsManager.sendTextMessage(otherPlayerNumber, null, "initiate", sent, null);
+        } catch (SecurityException | IllegalArgumentException | UnsupportedOperationException ex) {
+            sent.cancel();
+            inviteFailed("Android could not send the invitation. Check SMS permission, the phone number and your SIM.");
+        }
+    }
+
+    private void showInviteProgress() {
+        if (inviteProgress == null) {
+            inviteProgress = new ProgressDialog(this);
+            inviteProgress.setCancelable(true);
+            inviteProgress.setCanceledOnTouchOutside(false);
+            inviteProgress.setOnCancelListener(dialog -> { clearInvite(); reset(); });
+        }
+        inviteProgress.setMessage(inviteSent ? "Invitation sent. Waiting for the other player..." : "Sending invitation by SMS...");
+        inviteProgress.show();
+    }
+
+    private void clearInvite() {
+        inviteId = null;
+        inviteSent = false;
+        if (inviteProgress != null) inviteProgress.dismiss();
+    }
+
+    private void inviteFailed(String reason) {
+        clearInvite();
+        new AlertDialog.Builder(this).setTitle("Invitation not sent").setMessage(reason)
+                .setPositiveButton("Try again", (dialog, which) -> setupMultiplayer())
+                .setNegativeButton("Cancel", (dialog, which) -> reset()).setCancelable(false).show();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putString("inviteNumber", otherPlayerNumber);
+        state.putString("pendingPermissionNumber", pendingPermissionNumber);
+        state.putString("inviteId", inviteId);
+        state.putBoolean("inviteSent", inviteSent);
+    }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(inviteResult);
+        unregisterReceiver(smsReceiver);
+        if (inviteProgress != null) inviteProgress.dismiss();
+        super.onDestroy();
     }
 
     public void showWaitingDialog() {
